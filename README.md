@@ -139,7 +139,7 @@ Here’s a list of the available functions and their usage:
 
    **Usage**:
    ```powershell
-   push
+   push <commitmessage>
    ```
 
    **Process**:
