@@ -373,6 +373,7 @@ function create_repo {
         Write-Host "Please provide a repository name." -ForegroundColor Red
         return
     }
+    
 
     # Fetch the GitHub username dynamically using GitHub CLI
     $userInfo = gh api "user" -H "Accept: application/vnd.github+json" | ConvertFrom-Json
