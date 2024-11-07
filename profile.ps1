@@ -370,7 +370,15 @@ function create_repo {
     )
 
     if (-not $repoName) {
-        Write-Host "Please provide a repository name."-ForegroundColor Red
+        Write-Host "Please provide a repository name." -ForegroundColor Red
+        return
+    }
+
+    # Fetch the GitHub username dynamically using GitHub CLI
+    $userInfo = gh api "user" -H "Accept: application/vnd.github+json" | ConvertFrom-Json
+    $username = $userInfo.login
+    if (-not $username) {
+        Write-Host "Error: Unable to fetch the GitHub username." -ForegroundColor Red
         return
     }
 
@@ -399,7 +407,7 @@ function create_repo {
         try {
             git commit -m $commitMessage
             git branch -M main
-            git remote add origin "https://github.com/Hackprakas/$repoName.git"
+            git remote add origin "https://github.com/$username/$repoName.git"
         } catch {
             Write-Host "Error: Failed to commit changes. There may be no changes to commit." -ForegroundColor Red
             return
