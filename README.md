@@ -142,8 +142,28 @@ Here’s a list of the available functions and their usage:
    push <commitmessage>
    ```
 
-   **Process**:
-   - Pushes the changes from the local repository to the remote repository.
+### 12.**`change_visibility`**
+   Changes the visibility of a specified Git repository to either "public" or "private."  
+   If the visibility is already set to the specified option, no changes are made, and the user is notified.  
+   The function infers the repository name from the `.git` folder in the current directory. If no Git folder is found, it prompts the user to enter a repository name.
+
+   **Usage**:
+   ```powershell
+   change_visibility <visibility>
+   ```
+   - `<visibility>`: Set to `public` or `private` to specify the desired repository visibility.
+
+   **Example**:
+   ```powershell
+   change_visibility public
+   ```
+
+   **Behavior**:
+   - **Repository Found in Current Directory**: The function changes the repository’s visibility only if it differs from the specified value. If the visibility is already set, the user is notified.
+   - **No Repository in Current Directory**: Prompts the user to enter a repository name if no `.git` folder is detected.
+   
+   **Output**:
+   Displays a confirmation message if visibility is changed or a notification if no change was needed.
 
 ## Notes
 - **GitHub CLI (gh)** must be installed for these functions to work.

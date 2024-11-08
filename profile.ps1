@@ -490,3 +490,51 @@ function List-Repo {
 
 # Set an alias for convenience
 Set-Alias -Name list_repo -Value List-Repo
+
+function change_visibility {
+    param (
+        [string]$newVisibility
+    )
+
+    # Validate the visibility parameter
+    if ($newVisibility -ne "public" -and $newVisibility -ne "private") {
+        Write-Host "Invalid visibility option. Please use 'public' or 'private'." -ForegroundColor Red
+        return
+    }
+
+    # Get the remote URL from the Git configuration
+    $remoteUrl = git config --get remote.origin.url
+
+    if (-not $remoteUrl) {
+        # If no Git repository or remote origin is found, prompt for the repository name in the required format
+        $repoPath = Read-Host "Please enter the repository in '[HOST/]OWNER/REPO' format"
+    } else {
+        # Parse the repository path in '[HOST/]OWNER/REPO' format
+        if ($remoteUrl -match "([^/:]+)/([^/]+)\.git$") {
+            $owner = $matches[1]
+            $repoName = $matches[2]
+            $repoPath = "$owner/$repoName"
+        } else {
+            Write-Host "Error: Unable to parse repository path." -ForegroundColor Red
+            return
+        }
+    }
+
+    # Get the current visibility of the repository
+    $repoInfo = gh repo view $repoPath --json visibility | ConvertFrom-Json
+    $currentVisibility = $repoInfo.visibility
+    Write-Host "Current Visibility: $currentVisibility" -ForegroundColor Blue
+
+    if (-not $currentVisibility) {
+        Write-Host "Error: Could not retrieve the current visibility. Check if the repository exists and try again." -ForegroundColor Red
+        return
+    }
+
+    if ($currentVisibility -eq $newVisibility) {
+        Write-Host "The repository is already set to $newVisibility." -ForegroundColor Yellow
+    } else {
+        # Change visibility if different
+        gh repo edit $repoPath --visibility $newVisibility
+        Write-Host "Repository visibility changed to $newVisibility." -ForegroundColor Green
+    }
+}
