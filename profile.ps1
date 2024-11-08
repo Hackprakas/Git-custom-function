@@ -504,10 +504,13 @@ function change_visibility {
 
     # Get the remote URL from the Git configuration
     $remoteUrl = git config --get remote.origin.url
+    $userInfo = gh api "user" -H "Accept: application/vnd.github+json" | ConvertFrom-Json
+    $username = $userInfo.login
 
     if (-not $remoteUrl) {
         # If no Git repository or remote origin is found, prompt for the repository name in the required format
-        $repoPath = Read-Host "Please enter the repository in '[HOST/]OWNER/REPO' format"
+        $repoName = Read-Host "Please enter the repository name"
+        $repoPath = "$username/$repoName"
     } else {
         # Parse the repository path in '[HOST/]OWNER/REPO' format
         if ($remoteUrl -match "([^/:]+)/([^/]+)\.git$") {
