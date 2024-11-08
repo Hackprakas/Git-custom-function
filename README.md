@@ -111,6 +111,7 @@ Here’s a list of the available functions and their usage:
 
    **Process**:
    - Removes the specified users from the repository’s team or collaborators.
+   - the user specified should be github username and not github email id of the user.
 
 ### 9. **`add_member`**
    Adds a user to a GitHub repository's team or collaborators list.
@@ -122,6 +123,7 @@ Here’s a list of the available functions and their usage:
 
    **Process**:
    - Adds the specified users to the repository’s team or collaborators.
+   - It should be github username and not github user email.
 
 ### 10. **`pull`**
    Pulls the latest changes from the current branch in the remote repository.
