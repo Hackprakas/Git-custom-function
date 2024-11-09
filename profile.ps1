@@ -491,6 +491,72 @@ function List-Repo {
 # Set an alias for convenience
 Set-Alias -Name list_repo -Value List-Repo
 
+
+function set_default_branch {
+    param(
+        [Parameter(Mandatory=$true, Position=0)]
+        [string]$BranchName
+    )
+    
+    try {
+        # Check if git repository exists in current directory
+        if (-not (Test-Path .git)) {
+            Write-Host "Error: Not a git repository." -ForegroundColor Red
+            return
+        }
+        
+        # Get repository name from remote URL
+        $remoteUrl = git config --get remote.origin.url
+        if ($remoteUrl -match "github\.com[:/](.+?)(?:\.git)?$") {
+            $repoName = $matches[1]
+        } else {
+            Write-Host "Error: Could not determine repository name. Make sure you have a GitHub remote configured." -ForegroundColor Red
+            return
+        }
+        
+        # Check if branch exists
+        $branchExists = git branch --list $BranchName
+        if (-not $branchExists) {
+            Write-Host "Error: Branch '$BranchName' does not exist locally." -ForegroundColor Red
+            return
+        }
+
+        # Get current default branch
+        $currentDefault = (gh repo view $repoName --json defaultBranchRef --jq .defaultBranchRef.name)
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Error: Could not fetch repository information." -ForegroundColor Red
+            return
+        }
+
+        # Check if branch is already default
+        if ($currentDefault -eq $BranchName) {
+            Write-Host "Branch '$BranchName' is already set as the default branch." -ForegroundColor Yellow
+            return
+        }
+        
+        # Confirm with user
+        Write-Host "Current default branch: $currentDefault" -ForegroundColor Blue
+        $confirmation = Read-Host "Are you sure you want to change the default branch from '$currentDefault' to '$BranchName'? (y/n)"
+        if ($confirmation -ne 'y') {
+            Write-Host "Operation cancelled." -ForegroundColor Yellow
+            return
+        }
+        
+        # Change default branch using GitHub CLI
+        Write-Host "Changing default branch to '$BranchName'..." -ForegroundColor Blue
+        $result = gh repo edit $repoName --default-branch $BranchName
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Successfully changed default branch from '$currentDefault' to '$BranchName'." -ForegroundColor Green
+        } else {
+            Write-Host "Error: Failed to change default branch. Make sure you have proper permissions." -ForegroundColor Red
+        }
+    }
+    catch {
+        Write-Host "Error: $_" -ForegroundColor Red
+    }
+}
+
 function change_visibility {
     param (
         [string]$newVisibility

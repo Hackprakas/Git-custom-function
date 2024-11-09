@@ -165,6 +165,14 @@ Here’s a list of the available functions and their usage:
    **Output**:
    Displays a confirmation message if visibility is changed or a notification if no change was needed.
 
+### 13. **`set_default_branch`**
+   Changes the default branch of the current GitHub repository.
+
+   **Usage**:
+   ```powershell
+   set_default_branch <branchName>
+   ```
+
 ## Notes
 - **GitHub CLI (gh)** must be installed for these functions to work.
 - The `profile.ps1` script should be saved in your **Documents folder** (e.g., `C:\Users\<YourUsername>\Documents\profile.ps1`) for it to be loaded automatically in PowerShell.
