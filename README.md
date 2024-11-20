@@ -76,20 +76,8 @@ Here’s a list of the available functions and their usage:
    - Checks if the branch exists.
    - Switches to the branch if it exists, or creates and switches to a new one if it doesn't.
 
-### 6. **`sync`**
-   Pulls the latest changes, commits changes with a provided message, and pushes them to the current branch.
 
-   **Usage**:
-   ```powershell
-   sync <commitMessage>
-   ```
-
-   **Process**:
-   - Pulls the latest changes from the remote repository.
-   - Stages and commits changes with the specified commit message.
-   - Pushes the changes to the current branch.
-
-### 7. **`delete_branch`**
+### 6. **`delete_branch`**
    Deletes a local or remote Git branch.
 
    **Usage**:
@@ -101,7 +89,7 @@ Here’s a list of the available functions and their usage:
    - Deletes the specified branch locally.
    - Optionally deletes the branch remotely if `-localonly` is not specified.
 
-### 8. **`remove_member`**
+### 7. **`remove_member`**
    Removes a user from a GitHub repository's team or collaborators list.
 
    **Usage**:
@@ -113,7 +101,7 @@ Here’s a list of the available functions and their usage:
    - Removes the specified users from the repository’s team or collaborators.
    - the user specified should be github username and not github email id of the user.
 
-### 9. **`add_member`**
+### 8. **`add_member`**
    Adds a user to a GitHub repository's team or collaborators list.
 
    **Usage**:
@@ -125,7 +113,7 @@ Here’s a list of the available functions and their usage:
    - Adds the specified users to the repository’s team or collaborators.
    - It should be github username and not github user email.
 
-### 10. **`pull`**
+### 9. **`pull`**
    Pulls the latest changes from the current branch in the remote repository.
 
    **Usage**:
@@ -136,15 +124,15 @@ Here’s a list of the available functions and their usage:
    **Process**:
    - Pulls the latest changes from the remote repository to the current branch.
 
-### 11. **`push`**
-   Pushes committed changes from the local repository to the remote repository.
+### 10. **`push`**
+   Pushes committed changes from the local repository to the remote repository.Also pulls any remote changes
 
    **Usage**:
    ```powershell
    push <commitmessage>
    ```
 
-### 12.**`change_visibility`**
+### 11.**`change_visibility`**
    Changes the visibility of a specified Git repository to either "public" or "private."  
    If the visibility is already set to the specified option, no changes are made, and the user is notified.  
    The function infers the repository name from the `.git` folder in the current directory. If no Git folder is found, it prompts the user to enter a repository name.
@@ -167,7 +155,7 @@ Here’s a list of the available functions and their usage:
    **Output**:
    Displays a confirmation message if visibility is changed or a notification if no change was needed.
 
-### 13. **`set_default_branch`**
+### 12. **`set_default_branch`**
    Changes the default branch of the current GitHub repository.
 
    **Usage**:

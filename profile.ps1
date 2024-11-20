@@ -7,7 +7,7 @@ function push {
         Write-Host "Please provide a commit message." -ForegroundColor Red
         return
     }
-
+    git pull
     git add .
 
     try {
@@ -39,6 +39,72 @@ function push {
 
     Write-Host "Changes have been committed and pushed with message: $commitMessage" -ForegroundColor Green
 }
+
+function set_default_branch {
+    param(
+        [Parameter(Mandatory=$true, Position=0)]
+        [string]$BranchName
+    )
+    
+    try {
+        # Check if git repository exists in current directory
+        if (-not (Test-Path .git)) {
+            Write-Host "Error: Not a git repository." -ForegroundColor Red
+            return
+        }
+        
+        # Get repository name from remote URL
+        $remoteUrl = git config --get remote.origin.url
+        if ($remoteUrl -match "github\.com[:/](.+?)(?:\.git)?$") {
+            $repoName = $matches[1]
+        } else {
+            Write-Host "Error: Could not determine repository name. Make sure you have a GitHub remote configured." -ForegroundColor Red
+            return
+        }
+        
+        # Check if branch exists
+        $branchExists = git branch --list $BranchName
+        if (-not $branchExists) {
+            Write-Host "Error: Branch '$BranchName' does not exist locally." -ForegroundColor Red
+            return
+        }
+
+        # Get current default branch
+        $currentDefault = (gh repo view $repoName --json defaultBranchRef --jq .defaultBranchRef.name)
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Error: Could not fetch repository information." -ForegroundColor Red
+            return
+        }
+
+        # Check if branch is already default
+        if ($currentDefault -eq $BranchName) {
+            Write-Host "Branch '$BranchName' is already set as the default branch." -ForegroundColor Yellow
+            return
+        }
+        
+        # Confirm with user
+        Write-Host "Current default branch: $currentDefault" -ForegroundColor Blue
+        $confirmation = Read-Host "Are you sure you want to change the default branch from '$currentDefault' to '$BranchName'? (y/n)"
+        if ($confirmation -ne 'y') {
+            Write-Host "Operation cancelled." -ForegroundColor Yellow
+            return
+        }
+        
+        # Change default branch using GitHub CLI
+        Write-Host "Changing default branch to '$BranchName'..." -ForegroundColor Blue
+        $result = gh repo edit $repoName --default-branch $BranchName
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Successfully changed default branch from '$currentDefault' to '$BranchName'." -ForegroundColor Green
+        } else {
+            Write-Host "Error: Failed to change default branch. Make sure you have proper permissions." -ForegroundColor Red
+        }
+    }
+    catch {
+        Write-Host "Error: $_" -ForegroundColor Red
+    }
+}
+
 
 function relogin {
    
@@ -192,6 +258,60 @@ function delete_branch {
 
 # Set an alias for convenience
 # Set-Alias -Name mydetails -Value mydetails
+
+
+function change_visibility {
+    param (
+        [string]$newVisibility
+    )
+
+    # Validate the visibility parameter
+    if ($newVisibility -ne "public" -and $newVisibility -ne "private") {
+        Write-Host "Invalid visibility option. Please use 'public' or 'private'." -ForegroundColor Red
+        return
+    }
+
+    # Get the remote URL from the Git configuration
+    $remoteUrl = git config --get remote.origin.url
+    $userInfo = gh api "user" -H "Accept: application/vnd.github+json" | ConvertFrom-Json
+    $username = $userInfo.login
+
+    if (-not $remoteUrl) {
+        # If no Git repository or remote origin is found, prompt for the repository name in the required format
+        $repoName = Read-Host "Please enter the repository name"
+        $repoPath = "$username/$repoName"
+    } else {
+        # Parse the repository path in '[HOST/]OWNER/REPO' format
+        if ($remoteUrl -match "([^/:]+)/([^/]+)\.git$") {
+            $owner = $matches[1]
+            $repoName = $matches[2]
+            $repoPath = "$owner/$repoName"
+        } else {
+            Write-Host "Error: Unable to parse repository path." -ForegroundColor Red
+            return
+        }
+    }
+
+    # Get the current visibility of the repository
+    $repoInfo = gh repo view $repoPath --json visibility | ConvertFrom-Json
+    $currentVisibility = $repoInfo.visibility
+    Write-Host "Current Visibility: $currentVisibility" -ForegroundColor Blue
+
+    if (-not $currentVisibility) {
+        Write-Host "Error: Could not retrieve the current visibility. Check if the repository exists and try again." -ForegroundColor Red
+        return
+    }
+
+    if ($currentVisibility -eq $newVisibility) {
+        Write-Host "The repository is already set to $newVisibility." -ForegroundColor Yellow
+    } else {
+        # Change visibility if different
+        gh repo edit $repoPath --visibility $newVisibility
+        Write-Host "Repository visibility changed to $newVisibility." -ForegroundColor Green
+    }
+}
+
+
 
 
 function Remove-Member {
@@ -373,7 +493,6 @@ function create_repo {
         Write-Host "Please provide a repository name." -ForegroundColor Red
         return
     }
-    
 
     # Fetch the GitHub username dynamically using GitHub CLI
     $userInfo = gh api "user" -H "Accept: application/vnd.github+json" | ConvertFrom-Json
@@ -403,24 +522,23 @@ function create_repo {
 
     if ((Get-ChildItem -File | Measure-Object).Count -eq 0) {
         Write-Host "No files found in the directory. Skipping commit and push steps." -ForegroundColor Blue
+         git branch -M main
+         git remote add origin "https://github.com/$username/$repoName.git"
     } else {
         git add .
         try {
             git commit -m $commitMessage
             git branch -M main
             git remote add origin "https://github.com/$username/$repoName.git"
+            git push -u origin main
+            Write-Host "Repository '$repoName' created as $visibility and pushed with message: $commitMessage" -ForegroundColor Green
         } catch {
-            Write-Host "Error: Failed to commit changes. There may be no changes to commit." -ForegroundColor Red
+            Write-Host "Error: Failed to commit changes. Some error occured" -ForegroundColor Red
             return
         }
     }
 
-    try {
-        git push -u origin main
-        Write-Host "Repository '$repoName' created as $visibility and pushed with message: $commitMessage" -ForegroundColor Green
-    } catch {
-        Write-Host "Repository '$repoName' created as $visibility but no files were pushed (empty directory)." -ForegroundColor Red
-    }
+    
 }
 
 
@@ -492,118 +610,6 @@ function List-Repo {
 Set-Alias -Name list_repo -Value List-Repo
 
 
-function set_default_branch {
-    param(
-        [Parameter(Mandatory=$true, Position=0)]
-        [string]$BranchName
-    )
-    
-    try {
-        # Check if git repository exists in current directory
-        if (-not (Test-Path .git)) {
-            Write-Host "Error: Not a git repository." -ForegroundColor Red
-            return
-        }
-        
-        # Get repository name from remote URL
-        $remoteUrl = git config --get remote.origin.url
-        if ($remoteUrl -match "github\.com[:/](.+?)(?:\.git)?$") {
-            $repoName = $matches[1]
-        } else {
-            Write-Host "Error: Could not determine repository name. Make sure you have a GitHub remote configured." -ForegroundColor Red
-            return
-        }
-        
-        # Check if branch exists
-        $branchExists = git branch --list $BranchName
-        if (-not $branchExists) {
-            Write-Host "Error: Branch '$BranchName' does not exist locally." -ForegroundColor Red
-            return
-        }
 
-        # Get current default branch
-        $currentDefault = (gh repo view $repoName --json defaultBranchRef --jq .defaultBranchRef.name)
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error: Could not fetch repository information." -ForegroundColor Red
-            return
-        }
 
-        # Check if branch is already default
-        if ($currentDefault -eq $BranchName) {
-            Write-Host "Branch '$BranchName' is already set as the default branch." -ForegroundColor Yellow
-            return
-        }
-        
-        # Confirm with user
-        Write-Host "Current default branch: $currentDefault" -ForegroundColor Blue
-        $confirmation = Read-Host "Are you sure you want to change the default branch from '$currentDefault' to '$BranchName'? (y/n)"
-        if ($confirmation -ne 'y') {
-            Write-Host "Operation cancelled." -ForegroundColor Yellow
-            return
-        }
-        
-        # Change default branch using GitHub CLI
-        Write-Host "Changing default branch to '$BranchName'..." -ForegroundColor Blue
-        $result = gh repo edit $repoName --default-branch $BranchName
-        
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "Successfully changed default branch from '$currentDefault' to '$BranchName'." -ForegroundColor Green
-        } else {
-            Write-Host "Error: Failed to change default branch. Make sure you have proper permissions." -ForegroundColor Red
-        }
-    }
-    catch {
-        Write-Host "Error: $_" -ForegroundColor Red
-    }
-}
 
-function change_visibility {
-    param (
-        [string]$newVisibility
-    )
-
-    # Validate the visibility parameter
-    if ($newVisibility -ne "public" -and $newVisibility -ne "private") {
-        Write-Host "Invalid visibility option. Please use 'public' or 'private'." -ForegroundColor Red
-        return
-    }
-
-    # Get the remote URL from the Git configuration
-    $remoteUrl = git config --get remote.origin.url
-    $userInfo = gh api "user" -H "Accept: application/vnd.github+json" | ConvertFrom-Json
-    $username = $userInfo.login
-
-    if (-not $remoteUrl) {
-        # If no Git repository or remote origin is found, prompt for the repository name in the required format
-        $repoName = Read-Host "Please enter the repository name"
-        $repoPath = "$username/$repoName"
-    } else {
-        # Parse the repository path in '[HOST/]OWNER/REPO' format
-        if ($remoteUrl -match "([^/:]+)/([^/]+)\.git$") {
-            $owner = $matches[1]
-            $repoName = $matches[2]
-            $repoPath = "$owner/$repoName"
-        } else {
-            Write-Host "Error: Unable to parse repository path." -ForegroundColor Red
-            return
-        }
-    }
-
-    # Get the current visibility of the repository
-    $repoInfo = gh repo view $repoPath --json visibility | ConvertFrom-Json
-    $currentVisibility = $repoInfo.visibility
-    Write-Host "Current Visibility: $currentVisibility" -ForegroundColor Blue
-
-    if (-not $currentVisibility) {
-        Write-Host "Error: Could not retrieve the current visibility. Check if the repository exists and try again." -ForegroundColor Red
-        return
-    }
-
-    if ($currentVisibility -eq $newVisibility) {
-        Write-Host "The repository is already set to $newVisibility." -ForegroundColor Yellow
-    } else {
-        # Change visibility if different
-        gh repo edit $repoPath --visibility $newVisibility
-        Write-Host "Repository visibility changed to $newVisibility." -ForegroundColor Green
-    }
-}
